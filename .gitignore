@@ -1,0 +1,41 @@
+# Python
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.venv/
+venv/
+.env
+
+# OS / editor
+.DS_Store
+.vscode/
+.idea/
+
+# Runtime data
+data/cache/
+data/pushed_ids*.json
+data/*.json
+
+# Logs
+*.log
+logs/
+tmp/
+
+# Local OpenClaw / private deployment artifacts
+.openclaw/
+cron/
+jobs.json
+jobs.json.bak
+
+# Secrets / local configs
+*.secret
+*.token
+*.key
+*.pem
+
+# local runtime state / backups
+data/pushed_ids*.json
+data/*.bak
+data/*.bak.*
+data/cache/

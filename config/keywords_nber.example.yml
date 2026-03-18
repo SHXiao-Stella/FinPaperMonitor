@@ -1,0 +1,15 @@
+include:
+  - asset pricing
+  - corporate finance
+  - household finance
+  - financial markets
+  - macro finance
+  - monetary policy
+  - banking
+  - bond market
+  - stock market
+  - risk premium
+exclude:
+  - corrigendum
+  - editorial
+  - test document

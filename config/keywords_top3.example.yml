@@ -1,0 +1,13 @@
+include:
+  - asset pricing
+  - stochastic discount factor
+  - risk premium
+  - corporate finance
+  - capital structure
+  - household finance
+  - financial markets
+exclude:
+  - corrigendum
+  - editorial
+  - call for papers
+  - expression of concern

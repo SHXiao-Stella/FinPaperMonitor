@@ -1,0 +1,11 @@
+include:
+  - asset pricing
+  - corporate finance
+  - capital structure
+  - household finance
+  - risk premium
+  - financial markets
+exclude:
+  - corrigendum
+  - editorial
+  - call for papers

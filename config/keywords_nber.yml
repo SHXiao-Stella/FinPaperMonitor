@@ -1,0 +1,36 @@
+include:
+  - asset pricing
+  - risk premium
+  - expected returns
+  - return predictability
+  - anomaly
+  - anomalies
+  - factor pricing
+  - factor model
+  - stochastic discount factor
+  - sdf
+  - cross-sectional returns
+  - machine learning asset pricing
+  - macro-finance
+  - term structure
+  - bond risk premium
+  - equity premium
+  - intermediary asset pricing
+  - fund
+  - option
+  - bond
+  - LLM
+  - generative AI
+exclude:
+  - corrigendum
+  - editorial
+  - call for papers
+  - expression of concern
+  - household finance
+  - corporate finance
+  - capital structure
+  - labor market
+  - education
+  - health
+  - crime
+  - inequality
