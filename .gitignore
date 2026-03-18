@@ -39,3 +39,7 @@ data/pushed_ids*.json
 data/*.bak
 data/*.bak.*
 data/cache/
+.env.*
+!.env.example
+*.bak
+*.bak.*
