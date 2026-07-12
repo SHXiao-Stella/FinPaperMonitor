@@ -1,0 +1,11 @@
+top3:
+  doc_token: "paste_top3_doc_token_here"
+econ5:
+  doc_token: "paste_econ5_doc_token_here"
+nber:
+  doc_token: "paste_nber_doc_token_here"
+llm_finance:
+  doc_token: "paste_llm_finance_doc_token_here"
+  prepend: true
+  # Or provide a Feishu wiki page URL/token and the script will resolve the underlying document token:
+  # wiki_url: "https://example.feishu.cn/wiki/YourWikiNodeToken"

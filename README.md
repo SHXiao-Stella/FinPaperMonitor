@@ -1,177 +1,166 @@
-# Finance Paper Monitor
+# FinPaperMonitor
 
-A local monitoring project for:
+FinPaperMonitor reproduces a production paper-monitoring workflow built around Python, OpenClaw, and Feishu. It fetches papers, filters and ranks them, translates full abstracts into Chinese, archives the exact outbound Markdown to a Feishu document, and then delivers the same text to a Feishu group.
 
-- Top 3 finance journals:
-  - Journal of Finance (JF)
-  - Journal of Financial Economics (JFE)
-  - Review of Financial Studies (RFS)
-- NBER Working Papers
+## Monitors
 
-It fetches metadata, filters papers by keyword rules, avoids duplicate pushes using local state files, and can be used together with OpenClaw / Feishu for scheduled delivery.
+| Monitor | Sources | Default schedule (Asia/Shanghai) |
+| --- | --- | --- |
+| FinTop3 | Journal of Finance, Journal of Financial Economics, Review of Financial Studies | Daily 08:00 |
+| NBER | NBER Working Papers | Monday 08:10 |
+| LLMFin | arXiv, Semantic Scholar, SSRN, NBER | Daily 08:20 |
+| EconTop5 | AER, Econometrica, JPE, QJE, Review of Economic Studies | Daily 08:30 |
 
----
+The project intentionally does not contain Feishu IDs, document tokens, OpenClaw credentials, API keys, runtime state, caches, or historical outputs.
 
-## Features
+## Delivery contract
 
-- Monitor Top 3 finance journals from Crossref
-- Monitor NBER working papers from NBER metadata tables
-- Separate keyword configs for different sources
-- Separate pushed-ID state files for different sources
-- Local cache for NBER metadata
-- JSON-line output for downstream agent / bot processing
-- Easy integration with OpenClaw skills and cron jobs
-
----
-
-## Repository structure
+Every scheduled run follows the same order:
 
 ```text
-finance-paper-monitor-public/
-├── paper_monitor/
-├── scripts/
-├── config/
-├── skills/
-│   └── top3-journal-monitor/
-│       └── SKILL.md
-├── data/
-│   └── .gitkeep
-├── requirements.txt
-└── README.md
+fetch -> filter/dedupe -> rank -> translate -> render JSONL + Markdown
+      -> archive Markdown to Feishu document
+      -> commit pushed IDs
+      -> OpenClaw announces the same Markdown to the Feishu group
 ```
 
----
+Document archiving must succeed before pushed state is committed. This makes document failures retryable and prevents a paper from being silently marked as delivered before it has been archived.
 
 ## Requirements
 
-- Python 3.10+
-- Linux / macOS recommended
-- Optional:
-  - OpenClaw
-  - Feishu bot integration
+- Python 3.10 or newer
+- A working OpenClaw gateway and model provider
+- An OpenClaw Feishu channel
+- A Feishu app with bot delivery and document/wiki read-write permissions
+- Linux or macOS; the deployment scripts use Bash
 
----
+The reference deployment is tested with Python 3.12 and OpenClaw 2026.4.24. LLM output is inherently nondeterministic, so matching the OpenClaw version, agent model, prompts, and configs gives functionally equivalent results, not guaranteed byte-identical text.
 
-## Setup
+`scripts/bootstrap.sh` installs the tested direct and transitive versions from `requirements.lock`. Set `PAPER_MONITOR_REQUIREMENTS_FILE=requirements.txt` when deliberately testing newer compatible dependency versions.
 
-```bash
-python3 -m venv .venv
-source .venv/bin/activate
-pip install -r requirements.txt
-```
-
----
-
-## Keyword configuration
-
-Top3 and NBER can use different keyword files.
-
-Expected config files:
-
-- `config/keywords_top3.yml`
-- `config/keywords_nber.yml`
-
-Example format:
-
-```yaml
-include:
-  - asset pricing
-  - corporate finance
-exclude:
-  - corrigendum
-  - editorial
-```
-
----
-
-## Run manually
-
-### Run Top3 monitor
+## Quick start
 
 ```bash
-source .venv/bin/activate
-python scripts/run_monitor.py --source top3 --limit 5
+git clone https://github.com/SHXiao-Stella/FinPaperMonitor.git
+cd FinPaperMonitor
+./scripts/bootstrap.sh
 ```
 
-### Run NBER monitor
-
-```bash
-source .venv/bin/activate
-python scripts/run_monitor.py --source nber --limit 30
-```
-
----
-
-## Output behavior
-
-The script prints one JSON object per selected paper.
-
-Typical fields include:
-
-- `id`
-- `source`
-- `title`
-- `authors`
-- `journal`
-- `published`
-- `DOI`
-- `abstract`
-- `url`
-
-This makes it easy for an agent to:
-- translate abstracts into Chinese
-- summarize
-- post to chat tools
-- log results
-
----
-
-## State files
-
-The project may create local runtime files such as:
-
-- `data/pushed_ids_top3.json`
-- `data/pushed_ids_nber.json`
-- `data/cache/nber/*`
-
-These files should not be committed to a public repository.
-
----
-
-## OpenClaw skill integration
-
-A sample skill file is included at:
+Configure the local files created by bootstrap:
 
 ```text
-skills/top3-journal-monitor/SKILL.md
+.env
+config/doc_archive.local.yml
 ```
 
-This skill tells OpenClaw how to run:
+At minimum, set the Feishu group ID in `.env`:
 
-- daily Top3 monitoring
-- weekly NBER monitoring
+```dotenv
+PAPER_MONITOR_FEISHU_TARGET=your_feishu_chat_id
+```
 
----
+Set one writable document or wiki target for each monitor in `config/doc_archive.local.yml`. These files are ignored by Git.
 
-## Privacy / publishing notes
+Validate the deployment without sending or writing remote content:
 
-Before publishing your own fork or deployment:
+```bash
+.venv/bin/python scripts/doctor.py
+```
 
-- remove all personal chat IDs
-- remove all private session IDs
-- remove all bot open IDs
-- remove runtime cache/state files
-- remove local cron/job files
-- remove private config values or tokens
-- review logs before sharing
+After the doctor passes, install the four OpenClaw cron jobs:
 
----
+```bash
+./scripts/install_openclaw_jobs.sh
+openclaw cron list
+```
+
+The installer refuses to overwrite jobs with the same names. If creation fails partway through, it removes only the jobs created by that installer run.
+
+See [docs/deploy-openclaw-feishu.md](docs/deploy-openclaw-feishu.md) for the full OpenClaw and Feishu setup.
+
+## Manual runs
+
+Fetch and filter raw metadata without translating, archiving, or changing state:
+
+```bash
+.venv/bin/python scripts/run_monitor.py --source top3 --limit 5
+.venv/bin/python scripts/run_monitor.py --source econ5 --limit 5
+.venv/bin/python scripts/run_monitor.py --source nber --limit 30
+```
+
+Generate the same translated digest as production without archiving or changing pushed state:
+
+```bash
+.venv/bin/python scripts/run_delivery.py --source top3 --prepare-only
+.venv/bin/python scripts/run_delivery.py --source llm_finance --prepare-only
+```
+
+A live delivery run archives the document and commits state. Its stdout is designed to be forwarded unchanged by OpenClaw:
+
+```bash
+.venv/bin/python scripts/run_delivery.py --source top3
+```
+
+Available sources are `top3`, `econ5`, `nber`, and `llm_finance`.
+
+## Configuration
+
+| File | Purpose |
+| --- | --- |
+| `config/keywords_top3.yml` | Top3 include/exclude rules |
+| `config/keywords_econ5.yml` | EconTop5 include/exclude rules |
+| `config/keywords_nber.yml` | NBER include/exclude rules |
+| `config/keywords_common.yml` | LLMFin grouped rules, buckets, and scoring |
+| `config/llm_finance_daily.yml` | LLMFin sources, queries, ranking, and schedule |
+| `config/doc_archive.example.yml` | Safe template for local Feishu document targets |
+| `.env.example` | Safe template for deployment environment variables |
+
+`SEMANTIC_SCHOLAR_API_KEY` is optional. Without it, Semantic Scholar uses anonymous API limits.
+
+## Runtime state
+
+All runtime files live under `data/` and are ignored by Git:
+
+```text
+data/
+├── archive_out/             # selected JSONL, rendered Markdown, cron logs
+├── cache/nber/              # NBER metadata cache
+├── logs/                    # pipeline logs and candidate audits
+├── state/                   # LLMFin global/task dedupe state
+├── pushed_ids_top3.json
+├── pushed_ids_econ5.json
+├── pushed_ids_nber.json
+└── doc_archive_runs.json    # idempotent Feishu document run keys
+```
+
+Back up `data/` before moving a deployment. Deleting it causes previously delivered papers to become eligible again.
+
+## Repository layout
+
+```text
+paper_monitor/               # Crossref/NBER fetch, simple filtering, state
+src/                         # multi-source LLMFin pipeline
+src/sources/                 # arXiv, Semantic Scholar, SSRN, NBER, Top3
+scripts/                     # entrypoints, archive, bootstrap, doctor, cron install
+config/                      # public rules and safe examples
+deploy/openclaw/             # OpenClaw cron prompt template
+skills/                      # optional OpenClaw manual-run skill
+tests/                       # offline unit and transaction tests
+docs/                        # architecture and deployment guides
+```
+
+The active workflow is documented in [docs/architecture.md](docs/architecture.md).
+
+## Development
+
+```bash
+.venv/bin/python -m unittest discover -s tests -v
+.venv/bin/python -m compileall -q paper_monitor src scripts
+bash scripts/audit_public_repo.sh .
+```
+
+Do not commit `.env`, `config/doc_archive.local.yml`, `~/.openclaw/openclaw.json`, cron exports, state files, logs, or generated digests.
 
 ## License
 
-Add your preferred open-source license here, for example:
-
-- MIT
-- Apache-2.0
-- GPL-3.0
-
+MIT. See [LICENSE](LICENSE).

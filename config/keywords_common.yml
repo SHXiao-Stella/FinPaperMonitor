@@ -1,0 +1,296 @@
+groups:
+  llm_core_terms:
+    - llm
+    - llms
+    - large language model
+    - large language models
+    - generative ai
+    - generative artificial intelligence
+    - chatgpt
+    - gpt
+    - financial llm
+    - llm for finance
+    - fingpt
+    - bloomberggpt
+  llm_method_terms:
+    - prompt engineering
+    - retrieval augmented generation
+    - rag
+    - tool use
+    - function calling
+    - reasoning model
+    - instruction tuning
+    - fine-tuning
+    - finetuning
+    - alignment
+    - in-context learning
+    - zero-shot
+    - few-shot
+    - agent
+    - agents
+    - multi-agent
+    - autonomous agent
+  finance_scope_terms:
+    - finance
+    - financial
+    - financial market
+    - financial markets
+    - stock market
+    - equity market
+    - bond market
+    - investor
+    - investors
+    - institutional investor
+    - hedge fund
+    - mutual fund
+    - portfolio
+    - asset pricing
+    - trading
+    - investment
+    - banking
+    - bank
+    - lending
+    - loan
+    - loans
+    - credit risk
+    - insurance
+    - financial compliance
+    - financial regulation
+    - bank regulation
+    - banking regulation
+    - accounting compliance
+    - accounting
+    - corporate finance
+    - market microstructure
+    - options
+    - derivatives
+    - analyst
+    - analysts
+  finance_task_terms:
+    - return prediction
+    - return predictability
+    - stock return
+    - stock returns
+    - price movement
+    - market prediction
+    - forecasting
+    - forecast
+    - trading strategy
+    - portfolio optimization
+    - portfolio allocation
+    - risk management
+    - fraud detection
+    - sentiment analysis
+    - text classification
+    - information extraction
+    - signal generation
+    - valuation
+  finance_data_terms:
+    - earnings call
+    - earnings calls
+    - conference call
+    - conference calls
+    - earnings transcript
+    - 10-k
+    - 10-q
+    - sec filing
+    - sec filings
+    - annual report
+    - quarterly report
+    - disclosure
+    - disclosures
+    - risk disclosure
+    - risk disclosures
+    - analyst report
+    - analyst reports
+    - financial statement
+    - financial statements
+    - balance sheet
+    - income statement
+    - cash flow statement
+    - financial narratives
+    - financial news
+    - market news
+    - news article
+    - md&a
+    - management discussion and analysis
+  finance_tooling_terms:
+    - benchmark
+    - benchmarks
+    - evaluation
+    - leaderboard
+    - dataset
+    - corpus
+    - annotation
+    - labeled data
+    - instruction tuning
+    - fine-tuning
+    - finetuning
+    - alignment
+    - agent
+    - agents
+    - finance agent
+    - financial agent
+    - copilot
+    - assistant
+    - temporal consistency
+    - chronology consistency
+    - chronological consistency
+    - time consistency
+  strong_finance_outcome_terms:
+    - asset pricing
+    - alpha
+    - abnormal return
+    - excess return
+    - return predictability
+    - trading profit
+    - sharpe ratio
+    - portfolio performance
+    - volatility
+    - liquidity
+    - credit spread
+    - default risk
+    - loan performance
+    - investor attention
+    - analyst forecast
+    - disclosure quality
+  deprioritize_generic_ai_terms:
+    - general-domain
+    - generic benchmark
+    - broad business
+    - business analytics
+    - management support
+    - enterprise productivity
+    - customer service
+    - marketing only
+    - healthcare
+    - medical
+    - biology
+    - chemistry
+    - robotics
+    - autonomous driving
+    - software engineering only
+    - code generation only
+    - general time series
+  generic_ml_terms:
+    - machine learning
+    - deep learning
+    - neural network
+    - neural networks
+    - natural language processing
+    - nlp
+    - text mining
+    - text analytics
+    - sentiment model
+    - news sentiment
+  exclude_terms:
+    - medical imaging
+    - radiology
+    - genomics
+    - protein
+    - chemistry
+    - pathology
+    - speech recognition
+    - machine translation
+    - education
+    - tutoring
+    - legal only
+    - clinical
+    - recommendation system for shopping
+
+scoring:
+  title_match_weight: 2.4
+  abstract_match_weight: 1.9
+  author_keyword_weight: 0.3
+  require_all_bonus: 2.8
+  require_any_bonus: 1.2
+  optional_group_bonus: 0.7
+  title_alignment_bonus: 0.4
+  bucket_base_bonus:
+    core_llm_in_finance: 2.8
+    finance_llm_tooling: 3.3
+    adjacent_or_noise: -1.2
+  llm_core_bonus: 1.1
+  finance_scope_bonus: 1.3
+  strong_outcome_bonus: 1.5
+  abstract_signal_bonus: 0.9
+  deprioritize_penalty_weight: 1.7
+  tooling_focus_bonus: 2.4
+
+buckets:
+  core_llm_in_finance:
+    require_all:
+      - llm_core_terms
+      - finance_scope_terms
+    require_title_or_abstract_any:
+      - llm_core_terms
+    require_any:
+      - finance_task_terms
+      - finance_data_terms
+      - strong_finance_outcome_terms
+    optional_any:
+      - llm_method_terms
+      - finance_tooling_terms
+    penalty_groups:
+      - deprioritize_generic_ai_terms
+    min_total_matches: 3
+  finance_llm_tooling:
+    require_all:
+      - llm_core_terms
+      - finance_scope_terms
+      - finance_tooling_terms
+    require_title_or_abstract_any:
+      - llm_core_terms
+    optional_any:
+      - finance_data_terms
+      - finance_task_terms
+      - llm_method_terms
+    penalty_groups:
+      - deprioritize_generic_ai_terms
+    min_total_matches: 3
+  adjacent_or_noise:
+    require_all:
+      - finance_scope_terms
+    require_any:
+      - generic_ml_terms
+      - llm_method_terms
+      - finance_task_terms
+      - finance_data_terms
+      - finance_tooling_terms
+    penalty_groups:
+      - deprioritize_generic_ai_terms
+    min_total_matches: 2
+
+profiles:
+  llm_finance:
+    allowed_buckets:
+      - core_llm_in_finance
+      - finance_llm_tooling
+      - adjacent_or_noise
+    exclude:
+      - exclude_terms
+  finance_broad:
+    require_any:
+      - finance_scope_terms
+      - finance_task_terms
+      - finance_data_terms
+      - strong_finance_outcome_terms
+    optional_any:
+      - llm_core_terms
+      - llm_method_terms
+      - finance_tooling_terms
+    exclude:
+      - exclude_terms
+    min_total_matches: 1
+  finance_ai_bridge:
+    require_any:
+      - finance_scope_terms
+      - finance_task_terms
+      - finance_data_terms
+    optional_any:
+      - llm_core_terms
+      - llm_method_terms
+      - finance_tooling_terms
+    exclude:
+      - exclude_terms
+    min_total_matches: 2

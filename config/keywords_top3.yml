@@ -18,6 +18,9 @@ include:
   - bond
   - LLM
   - generative AI
+  - cross prediction
+  - portfolio
+  - spillover
 exclude:
   - corrigendum
   - editorial

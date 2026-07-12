@@ -1,0 +1,158 @@
+task_name: llm_finance_daily
+display_name: LLM Finance Daily
+enabled: true
+target_count: 5
+min_count: 4
+lookback_days: 21
+sources:
+  - arxiv
+  - semanticscholar
+  - ssrn
+  - nber
+filter_profile: llm_finance
+ranking:
+  llm_semantic: true
+  semantic_max_candidates: 30
+  semantic_batch_size: 8
+  prefer_recent_days: 10
+  source_weights:
+    arXiv: 1.05
+    Semantic Scholar: 1.0
+    SSRN: 0.9
+    NBER: 0.55
+  bucket_weights:
+    core_llm_in_finance: 2.6
+    finance_llm_tooling: 1.1
+    adjacent_or_noise: -1.4
+  query_group_weights:
+    core_market_prediction: 1.4
+    disclosure_earnings_filings: 1.3
+    financial_narratives_news: 1.0
+    banking_credit_regulation: 1.2
+    market_microstructure_options: 1.1
+    finance_specific_tooling: 0.9
+    weak_adjacent_backup: -0.5
+  completeness_weight: 0.75
+  rule_score_weight: 1.0
+  recency_weight: 1.35
+  generic_penalty_weight: 1.4
+  balance:
+    min_core_papers: 3
+    max_tooling_papers: 1
+    semantic_backfill_when_short: true
+    semantic_backfill_min_score: 20
+translation:
+  batch_size: 5
+notification:
+  channel: feishu
+  target_env: PAPER_MONITOR_FEISHU_TARGET
+  target: ""
+  send_chat_notification: false
+  short_message_template: "{display_name} 文档已更新"
+  send_when_empty: true
+schedule:
+  timezone: Asia/Shanghai
+  cron: "20 8 * * *"
+
+query_groups:
+  core_market_prediction:
+    description: "Direct LLM-in-finance papers on stock returns, trading, portfolio, and asset pricing."
+    queries:
+      - '"large language model" AND (finance OR financial) AND ("stock return" OR "return predictability" OR trading OR portfolio OR "asset pricing")'
+      - '(LLM OR ChatGPT OR "generative AI" OR FinGPT OR BloombergGPT) AND ("stock market" OR equity OR investor) AND (trading OR portfolio OR "price movement" OR "return prediction")'
+      - '("financial LLM" OR "LLM for finance" OR "large language model") AND ("asset pricing" OR "market prediction" OR "trading strategy" OR portfolio)'
+  disclosure_earnings_filings:
+    description: "LLM papers using corporate disclosure, earnings calls, and filings."
+    queries:
+      - '(LLM OR ChatGPT OR "large language model" OR "generative AI") AND ("earnings call" OR "conference call" OR transcript OR "10-K" OR "10-Q" OR disclosure OR "risk disclosure")'
+      - '("large language model" OR LLM) AND ("financial statement" OR "annual report" OR "analyst report" OR "management discussion" OR MD&A)'
+      - '(LLM OR "generative AI") AND (disclosure OR filing OR "earnings announcement" OR "risk factor") AND (finance OR financial OR investor)'
+  financial_narratives_news:
+    description: "Financial narratives, news, sentiment, and textual classification."
+    queries:
+      - '(LLM OR "large language model" OR "generative AI") AND ("financial narratives" OR "market news" OR "financial news" OR sentiment OR narrative) AND (finance OR markets)'
+      - '("large language model" OR LLM) AND ("news classification" OR "text classification" OR summarization OR extraction) AND (financial OR finance OR investor)'
+      - '(LLM OR ChatGPT) AND (news OR disclosure OR narrative) AND ("systemic risk" OR jumps OR volatility OR markets)'
+  banking_credit_regulation:
+    description: "LLM applications in banking, lending, credit risk, regulation, and compliance."
+    queries:
+      - '(LLM OR "large language model" OR ChatGPT OR "generative AI") AND (banking OR bank OR lending OR loan OR "credit risk" OR mortgage) AND (finance OR financial)'
+      - '("large language model" OR LLM) AND (regulation OR compliance OR supervision OR "financial regulation") AND (banking OR finance OR financial)'
+      - '(LLM OR "generative AI") AND (insurance OR fraud OR AML OR KYC OR compliance) AND (financial OR finance)'
+  market_microstructure_options:
+    description: "LLM applications in market microstructure, derivatives, and investor interactions."
+    queries:
+      - '(LLM OR "large language model" OR "generative AI") AND ("market microstructure" OR liquidity OR options OR derivatives OR "limit order book")'
+      - '(LLM OR ChatGPT) AND (options OR derivatives OR volatility OR order flow) AND (finance OR market)'
+      - '("large language model" OR LLM) AND ("investor communication" OR analyst OR recommendation OR broker) AND (market OR finance)'
+  finance_specific_tooling:
+    description: "Finance-specific benchmarks, evaluation, instruction tuning, and agents."
+    queries:
+      - '("financial LLM" OR "LLM for finance" OR FinGPT OR BloombergGPT) AND (benchmark OR evaluation OR leaderboard OR dataset)'
+      - '(LLM OR "large language model") AND (finance OR financial) AND ("instruction tuning" OR finetuning OR alignment OR reasoning OR evaluation)'
+      - '(LLM OR "large language model") AND (finance OR financial) AND (agent OR "multi-agent" OR assistant OR copilot)'
+      - '(LLM OR "large language model") AND (chronology OR temporal OR "time consistency" OR "chronological consistency") AND (finance OR financial)'
+  weak_adjacent_backup:
+    description: "Backup bucket for possibly relevant adjacent papers; lower priority only."
+    queries:
+      - '("generative AI" OR LLM OR "large language model") AND (fintech OR investment OR accounting OR "corporate finance")'
+      - '(AI OR "language model") AND (finance OR financial markets) AND (text OR forecasting OR decision-making)'
+
+source_settings:
+  arxiv:
+    lookback_days: 3
+    fallback_lookback_days: 7
+    fallback_min_candidates: 8
+    max_results_per_query: 15
+    max_queries_per_group: 1
+    max_total_queries: 6
+    timeout_seconds: 20
+    drop_missing_date: true
+    query_groups:
+      - core_market_prediction
+      - disclosure_earnings_filings
+      - financial_narratives_news
+      - banking_credit_regulation
+      - market_microstructure_options
+      - finance_specific_tooling
+  semanticscholar:
+    lookback_days: 3
+    fallback_lookback_days: 7
+    fallback_min_candidates: 8
+    max_results_per_query: 15
+    max_queries_per_group: 1
+    max_total_queries: 6
+    timeout_seconds: 18
+    drop_missing_date: true
+    query_groups:
+      - core_market_prediction
+      - disclosure_earnings_filings
+      - financial_narratives_news
+      - banking_credit_regulation
+      - market_microstructure_options
+      - finance_specific_tooling
+  ssrn:
+    lookback_days: 7
+    fallback_lookback_days: 14
+    fallback_min_candidates: 6
+    fetch_lookback_days: 21
+    max_results_per_query: 16
+    max_queries_per_group: 2
+    max_total_queries: 10
+    timeout_seconds: 20
+    drop_missing_date: true
+    query_groups:
+      - core_market_prediction
+      - disclosure_earnings_filings
+      - financial_narratives_news
+      - banking_credit_regulation
+      - market_microstructure_options
+      - finance_specific_tooling
+  nber:
+    lookback_days: 14
+    fallback_lookback_days: 21
+    fallback_min_candidates: 3
+    max_records: 80
+    max_cache_age_days: 7
+    cache_dir: data/cache/nber
+    drop_missing_date: true

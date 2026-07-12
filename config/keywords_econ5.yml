@@ -1,0 +1,34 @@
+include: []
+exclude:
+  - correction
+  - corrigendum
+  - corrigenda
+  - errata
+  - erratum
+  - editorial
+  - editorial note
+  - editor's note
+  - book review
+  - review essay
+  - comments and replies
+  - comment on
+  - reply to
+  - rejoinder
+  - discussion
+  - introduction to
+  - symposium
+  - conference issue
+  - call for papers
+  - expression of concern
+  - front matter
+  - back matter
+  - index
+  - annual report
+  - presidential address
+  - in memoriam
+  - obituary
+  - behavioral finance
+  - household finance
+  - insurance
+  - life insurance
+  - health insurance

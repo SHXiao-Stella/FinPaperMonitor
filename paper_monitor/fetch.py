@@ -13,6 +13,13 @@ JOURNAL_ISSN_MAP = {
     "Journal of Financial Economics": "0304-405X",
     "Review of Financial Studies": "0893-9454",
 }
+ECON5_JOURNAL_ISSN_MAP = {
+    "American Economic Review": "0002-8282",
+    "Econometrica": "0012-9682",
+    "Journal of Political Economy": "0022-3808",
+    "The Quarterly Journal of Economics": "0033-5533",
+    "Review of Economic Studies": "0034-6527",
+}
 
 logger = logging.getLogger(__name__)
 
@@ -45,7 +52,7 @@ def _extract_date_parts(item: Dict) -> Dict[str, str | int]:
     return {"published": "", "year": ""}
 
 
-def _normalize_item(item: Dict) -> Dict:
+def _normalize_item(item: Dict, source_label: str) -> Dict:
     title = _first(item.get("title", []))
 
     authors = []
@@ -66,7 +73,7 @@ def _normalize_item(item: Dict) -> Dict:
     doi = item.get("DOI", "") or ""
     return {
         "id": doi,
-        "source": "top_journal",
+        "source": source_label,
         "title": title,
         "authors": authors,
         "journal": _first(item.get("container-title", [])),
@@ -83,6 +90,7 @@ def fetch_journal_articles(
     journal_title: str,
     issn: str,
     from_date: str,
+    source_label: str = "top_journal",
     rows: int = 100,
     timeout: int = 30,
     max_pages: int = 20,
@@ -114,7 +122,7 @@ def fetch_journal_articles(
         if not items:
             break
 
-        results.extend(_normalize_item(item) for item in items)
+        results.extend(_normalize_item(item, source_label=source_label) for item in items)
 
         next_cursor = payload.get("next-cursor")
         if not next_cursor or next_cursor == cursor:
@@ -135,11 +143,33 @@ def fetch_journal_articles(
 
 def fetch_all_journals(from_date: str) -> List[Dict]:
     """Fetch all target journals. Failures are logged and skipped."""
+    return fetch_journals(JOURNAL_ISSN_MAP, from_date=from_date, source_label="top_journal")
+
+
+def fetch_all_econ5_journals(from_date: str) -> List[Dict]:
+    """Fetch all target economics top5 journals. Failures are logged and skipped."""
+    return fetch_journals(ECON5_JOURNAL_ISSN_MAP, from_date=from_date, source_label="econ5_journal")
+
+
+def fetch_journals(
+    journal_issn_map: Dict[str, str],
+    *,
+    from_date: str,
+    source_label: str,
+) -> List[Dict]:
+    """Fetch all journals from a journal->ISSN map. Failures are logged and skipped."""
     all_items: List[Dict] = []
 
-    for journal, issn in JOURNAL_ISSN_MAP.items():
+    for journal, issn in journal_issn_map.items():
         try:
-            all_items.extend(fetch_journal_articles(journal_title=journal, issn=issn, from_date=from_date))
+            all_items.extend(
+                fetch_journal_articles(
+                    journal_title=journal,
+                    issn=issn,
+                    from_date=from_date,
+                    source_label=source_label,
+                )
+            )
         except Exception as exc:  # Keep monitor stable.
             logger.error("Failed to fetch journal %s (ISSN=%s): %s", journal, issn, exc)
 

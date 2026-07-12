@@ -6,16 +6,18 @@ __pycache__/
 .venv/
 venv/
 .env
+.pytest_cache/
+.coverage
+htmlcov/
 
 # OS / editor
 .DS_Store
 .vscode/
 .idea/
 
-# Runtime data
-data/cache/
-data/pushed_ids*.json
-data/*.json
+# Runtime data. Keep only the placeholder used to retain the directory.
+data/*
+!data/.gitkeep
 
 # Logs
 *.log
@@ -33,13 +35,14 @@ jobs.json.bak
 *.token
 *.key
 *.pem
+config/*.local.yml
+config/doc_targets.yml
 
-# local runtime state / backups
-data/pushed_ids*.json
-data/*.bak
-data/*.bak.*
-data/cache/
+# Local runtime state / backups
 .env.*
 !.env.example
 *.bak
 *.bak.*
+
+# Generated deployment artifacts
+deploy/generated/

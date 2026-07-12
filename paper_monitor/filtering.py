@@ -35,7 +35,7 @@ def filter_papers(
     out: List[Dict] = []
 
     for p in papers:
-        if p.get("source") == "top_journal" and p.get("type") != "journal-article":
+        if p.get("source") in {"top_journal", "econ5_journal"} and p.get("type") != "journal-article":
             continue
 
         pub_date = _parse_date(str(p.get("published", "")))
