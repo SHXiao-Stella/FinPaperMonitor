@@ -1,8 +1,8 @@
 # Architecture
 
-## Active execution path
+## Reference execution path
 
-OpenClaw owns scheduling and final Feishu group delivery. Python owns all deterministic workflow steps before that delivery.
+The repository includes an OpenClaw and Feishu reference deployment. In that deployment, OpenClaw owns scheduling and final Feishu group delivery. Python owns all deterministic workflow steps before that delivery.
 
 ```text
 OpenClaw cron (isolated agentTurn)
@@ -25,6 +25,21 @@ OpenClaw cron (isolated agentTurn)
 ```
 
 The cron agent does not write or summarize the digest. Its prompt only invokes `run_delivery.py` and forwards stdout.
+
+## Portable execution contract
+
+The paper pipeline is not tied to OpenClaw scheduling or Feishu delivery. Its portable boundary is the selected JSONL plus rendered Markdown produced under `data/archive_out/`:
+
+```text
+any scheduler
+  -> generate selected JSONL + rendered Markdown
+  -> publish Markdown through the chosen durable destination
+  -> after publish success, commit IDs from the matching JSONL
+```
+
+An alternative scheduler may be system cron, a systemd timer, a Kubernetes CronJob, another agent platform, or a hosted workflow with persistent state. An alternative destination may be any app API, webhook, email service, document store, or channel connector.
+
+The default semantic ranking and translation backend does invoke `openclaw agent`. Removing OpenClaw completely therefore also requires a `BaseLLMBackend` adapter, not just a different scheduler. The integration points and exact commit entrypoints are documented in [customization.md](customization.md#replace-openclaw-or-feishu).
 
 ## Top3, EconTop5, and NBER path
 
@@ -56,7 +71,7 @@ The pipeline stages are:
 
 `src/notifier_openclaw.py` and `src/notifier_wecom_doc.py` support an older live pipeline mode. They remain for compatibility, but the shipped cron path does not use them for remote writes.
 
-## Transaction boundary
+## Reference transaction boundary
 
 For each source and run date/week, `run_delivery.py` creates:
 
@@ -103,7 +118,7 @@ None of these files belong in Git.
 
 ## External boundaries
 
-The application talks to:
+The reference application talks to:
 
 - Crossref for journal and SSRN metadata
 - NBER official metadata tables
@@ -113,4 +128,4 @@ The application talks to:
 - Feishu Open APIs for document conversion/insertion
 - OpenClaw delivery for final group messages
 
-Individual source failures in the LLMFin pipeline are logged and skipped. Translation failures fall back to `deep-translator` when available. A complete external outage can still produce an empty digest rather than fabricated papers.
+The OpenClaw model adapter, Feishu document adapter, and final delivery adapter are replaceable boundaries. Individual source failures in the LLMFin pipeline are logged and skipped. Translation failures fall back to `deep-translator` when available. A complete external outage can still produce an empty digest rather than fabricated papers.

@@ -1,6 +1,8 @@
 # Deploy with OpenClaw and Feishu
 
-This guide configures a new server. It never requires copying another server's `openclaw.json`, cron storage, state files, or credentials.
+This guide configures the repository's optional reference integration on a new server. OpenClaw is used because it combines model access, cron-style jobs, and adapters for many delivery channels; Feishu is the reference document archive and message destination. Neither platform is required for the underlying paper monitor. See [customization.md](customization.md#replace-openclaw-or-feishu) for another LLM backend, scheduler, or destination app.
+
+The steps below never require copying another server's `openclaw.json`, cron storage, state files, or credentials.
 
 ## 1. Install prerequisites
 

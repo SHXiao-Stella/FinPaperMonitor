@@ -1,6 +1,6 @@
 # FinPaperMonitor
 
-FinPaperMonitor reproduces a production paper-monitoring workflow built around Python, OpenClaw, and Feishu. It fetches papers, filters and ranks them, translates full abstracts into Chinese, archives the exact outbound Markdown to a Feishu document, and then delivers the same text to a Feishu group.
+FinPaperMonitor reproduces a production paper-monitoring workflow for fetching papers, filtering and ranking them, translating full abstracts into Chinese, and producing a push-ready Markdown digest. The included reference deployment uses OpenClaw for LLM access, scheduling, and channel delivery, and Feishu for document archiving and group messages. Neither OpenClaw nor Feishu is a required platform: the pipeline can be connected to another LLM backend, scheduler, and destination app.
 
 ## Monitors
 
@@ -15,36 +15,45 @@ The project intentionally does not contain Feishu IDs, document tokens, OpenClaw
 
 ## Delivery contract
 
-Every scheduled run follows the same order:
+The portable workflow contract is:
 
 ```text
 fetch -> filter/dedupe -> rank -> translate -> render JSONL + Markdown
-      -> archive Markdown to Feishu document
-      -> commit pushed IDs
-      -> OpenClaw announces the same Markdown to the Feishu group
+      -> publish through the chosen durable destination
+      -> commit pushed IDs only after that publish succeeds
 ```
 
-Document archiving must succeed before pushed state is committed. This makes document failures retryable and prevents a paper from being silently marked as delivered before it has been archived.
+The included OpenClaw and Feishu adapter uses a Feishu document as the durable destination, commits state after document archiving succeeds, and then lets OpenClaw announce the same Markdown to a Feishu group. This makes document failures retryable and prevents a paper from being silently marked as delivered before it has been archived.
+
+Another deployment can use system cron, a systemd timer, a Kubernetes CronJob, or an agent platform for scheduling, and any app API, webhook, email service, or message connector for delivery. Preserve the generate -> successful publish -> state commit order to avoid lost or repeatedly delivered papers.
 
 ## Requirements
 
 - Python 3.10 or newer
-- A working OpenClaw gateway and model provider
-- An OpenClaw Feishu channel
-- A Feishu app with bot delivery and document/wiki read-write permissions
-- Linux or macOS; the deployment scripts use Bash
+- Network access to the enabled literature sources
+- An LLM backend for semantic ranking and Chinese translation
+- A scheduler and a delivery channel appropriate for the target server
+- Linux or macOS; the included deployment scripts use Bash
+
+For the reference deployment, the LLM backend, scheduler, and channel are provided by a working OpenClaw installation, while a Feishu app provides bot delivery and document/wiki read-write permissions. A deployment that uses different integrations does not need those OpenClaw or Feishu prerequisites.
 
 The reference deployment is tested with Python 3.12 and OpenClaw 2026.4.24. LLM output is inherently nondeterministic, so matching the OpenClaw version, agent model, prompts, and configs gives functionally equivalent results, not guaranteed byte-identical text.
 
 `scripts/bootstrap.sh` installs the tested direct and transitive versions from `requirements.lock`. Set `PAPER_MONITOR_REQUIREMENTS_FILE=requirements.txt` when deliberately testing newer compatible dependency versions.
 
-## Quick start
+## Installation
+
+Every deployment starts with the same checkout and Python bootstrap:
 
 ```bash
 git clone https://github.com/SHXiao-Stella/FinPaperMonitor.git
 cd FinPaperMonitor
 ./scripts/bootstrap.sh
 ```
+
+Bootstrap creates the virtual environment, runtime directories, `.env`, and local archive-config template. It does not install a scheduled job, call a literature API, write remote content, or send a message.
+
+### OpenClaw and Feishu reference
 
 Configure the local files created by bootstrap:
 
@@ -76,7 +85,7 @@ openclaw cron list
 
 The installer refuses to overwrite jobs with the same names. If creation fails partway through, it removes only the jobs created by that installer run.
 
-See [docs/deploy-openclaw-feishu.md](docs/deploy-openclaw-feishu.md) for the full OpenClaw and Feishu setup.
+See [docs/deploy-openclaw-feishu.md](docs/deploy-openclaw-feishu.md) for the full optional OpenClaw and Feishu setup. For another scheduler or destination, follow [docs/customization.md](docs/customization.md#replace-openclaw-or-feishu).
 
 ## Manual runs
 
@@ -117,6 +126,27 @@ Available sources are `top3`, `econ5`, `nber`, and `llm_finance`.
 
 `SEMANTIC_SCHOLAR_API_KEY` is optional. Without it, Semantic Scholar uses anonymous API limits.
 
+For a focused change:
+
+- Edit `config/keywords_top3.yml`, `config/keywords_econ5.yml`, or `config/keywords_nber.yml` to change the simple monitors' title/abstract include and exclude terms.
+- Edit `config/keywords_common.yml` to change LLMFin term groups, filter profiles, buckets, and rule weights.
+- Edit `config/llm_finance_daily.yml` to change LLMFin queries, enabled sources, lookback windows, ranking weights, and result count.
+- Edit `paper_monitor/fetch.py` to change the Crossref journal/ISSN lists used by FinTop3 or EconTop5.
+- Add or modify a fetcher under `src/sources/` and register it in `src/pipeline.py` to change the multi-source LLMFin source set.
+
+Changing LLMFin from one finance topic to a completely different subject also requires updating the finance-specific semantic ranking and translation prompts in `src/ranker_llm.py` and `src/translator.py`; YAML changes alone are not sufficient. See [docs/customization.md](docs/customization.md) for the exact edit and validation paths.
+
+## Replace OpenClaw or Feishu
+
+OpenClaw is convenient because one installation can provide model access, cron-style scheduling, and adapters for many delivery channels. It is not part of the paper-fetching or filtering contract, and Feishu is only the repository's reference archive and message destination.
+
+There are two separate replacement points:
+
+1. **LLM backend:** the default `OpenClawAgentBackend` lives in `src/translator.py`. To run without OpenClaw at all, implement the same `BaseLLMBackend.generate_json(prompt, purpose)` interface for the chosen model API and select it in `build_llm_backend()`.
+2. **Scheduler and destination:** have any scheduler run the generator, publish the rendered Markdown to the chosen app, and commit the matching JSONL state only after publishing succeeds. Do not run `scripts/run_delivery.py` without `--prepare-only` in a non-Feishu integration, because its live path intentionally invokes `scripts/append_feishu_doc.py`.
+
+The generic adapter sequence and per-monitor commit commands are documented in [docs/customization.md](docs/customization.md#replace-openclaw-or-feishu). `scripts/doctor.py` and `scripts/install_openclaw_jobs.sh` validate and install only the reference OpenClaw/Feishu deployment; alternative adapters should provide their own credential and connectivity checks.
+
 ## Runtime state
 
 All runtime files live under `data/` and are ignored by Git:
@@ -149,7 +179,7 @@ tests/                       # offline unit and transaction tests
 docs/                        # architecture and deployment guides
 ```
 
-The active workflow is documented in [docs/architecture.md](docs/architecture.md).
+The active workflow is documented in [docs/architecture.md](docs/architecture.md). Topic, source, scheduler, and channel customization is documented in [docs/customization.md](docs/customization.md).
 
 ## Development
 
