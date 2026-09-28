@@ -101,6 +101,9 @@ def payload_to_paper(payload: Dict) -> Paper:
 
 
 def render_markdown(payloads: List[Dict], translations: Dict[str, object]) -> str:
+    if not payloads:
+        return "今日暂无符合条件且未推送的 Economics Top5 文献。\n"
+
     lines: List[str] = []
     for index, payload in enumerate(payloads, start=1):
         paper = payload_to_paper(payload)

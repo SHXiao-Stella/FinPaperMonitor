@@ -78,7 +78,7 @@ def main() -> int:
     except subprocess.CalledProcessError:
         return fail("第一步", "生成正文失败")
 
-    if not selected_path.exists() or selected_path.stat().st_size == 0:
+    if not selected_path.exists():
         return fail("第一步", "selected JSONL 未生成")
     if not rendered_path.exists() or rendered_path.stat().st_size == 0:
         return fail("第一步", "md 正文未生成")
