@@ -4,6 +4,7 @@ import json
 import os
 import re
 import shutil
+import uuid
 from pathlib import Path
 from typing import Any, Dict, List, Optional
 
@@ -135,6 +136,7 @@ class OpenClawAgentBackend(BaseLLMBackend):
             str(home_path) if home_path.exists() else "/usr/bin/openclaw"
         )
         self.agent_name = env_first("PAPER_MONITOR_OPENCLAW_AGENT", default="main") or "main"
+        self.session_id = str(uuid.uuid4())
         self.thinking = "low"
         self.timeout_seconds = 600
 
@@ -146,6 +148,8 @@ class OpenClawAgentBackend(BaseLLMBackend):
             "agent",
             "--agent",
             self.agent_name,
+            "--session-id",
+            self.session_id,
             "--json",
             "--thinking",
             self.thinking,
